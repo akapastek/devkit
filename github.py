@@ -60,20 +60,25 @@ def pr_summary(
 
 @app.command()
 def start_feature(
-    branch_name: str = typer.Argument(..., help="Nom de la branche pour la nouvelle feature"),
-    repo: str = typer.Option("", help="Propriétaire/dépôt (ex: owner/repo)"),
+    branch_name: str = typer.Argument(..., help="Nom de la nouvelle branche"),
+    repo: str = typer.Option(None, help="Propriétaire/dépôt (ex: owner/repo)"),
 ):
-    """Fork le dépôt et crée une branche pour une nouvelle feature."""
+    """Crée une branche pour une nouvelle feature (fork si nécessaire)."""
     if repo:
-        gh("repo", "fork", repo, "--clone")
-    else:
-        typer.echo("Erreur : il faut spécifier un dépôt avec --repo", err=True)
-        raise typer.Exit(1)
+        try:
+            # Vérifie si le dépôt est déjà forké
+            result = gh("repo", "list", "--json", "nameWithOwner", "--limit", "100")
+            if f"AbdoulDiagne/{repo.split('/')[1]}" in result:  # Remplace "AbdoulDiagne" par ton nom d'utilisateur
+                typer.echo("✅ Dépôt déjà forké. Utilisation du fork existant.")
+            else:
+                gh("repo", "fork", repo, "--clone")
+        except subprocess.CalledProcessError:
+            typer.echo("⚠️ Impossible de forker. Vérifie que tu as les droits ou utilise un fork existant.", err=True)
+            raise typer.Exit(1)
 
+    # Crée la branche
     subprocess.run(["git", "checkout", "-b", branch_name], check=True)
-    typer.echo(f"✅ Branche '{branch_name}' créée et prête pour la feature !")
-
-@app.command()
+    typer.echo(f"✅ Branche '{branch_name}' créée et prête pour la feature !")
 @app.command()
 def open_pr(
     title: str = typer.Option(..., prompt="Titre de la PR"),
