@@ -6,7 +6,7 @@ from rich.table import Table
 import typer
 from rich import box
 app = typer.Typer()
-#i'mworking on a new project
+#i'mworking on a new project , it is exciting
 def gh(*args: str) -> str:
     result = subprocess.run(['gh', *args], capture_output=True, text=True, check=True)
     return result.stdout.strip()
@@ -74,24 +74,22 @@ def start_feature(
     typer.echo(f"✅ Branche '{branch_name}' créée et prête pour la feature !")
 
 @app.command()
+@app.command()
 def open_pr(
-    repo:str,
-    title: str = typer.Option("", help="Titre de la PR (interactif si vide)"),
-    body: str = typer.Option("", help="Corps de la PR (interactif si vide)"),
-    ):
-    """Crée une PR de manière interactive."""
-    if not title:
-        title = typer.prompt("Titre de la PR")
-    if not body:
-        body = typer.prompt("Corps de la PR (markdown)")
-    if not repo:
-        repo=typer.prompt("repo de la PR")
-    args = ["pr", "create", "--title", title, "--body", body, "--fill"]
-    if repo:
-        args += ["--repo", repo]
-
-    result = gh(*args)
-    typer.echo(f"✅ PR créée : {result}")
+    title: str = typer.Option(..., prompt="Titre de la PR"),
+    body: str = typer.Option(..., prompt="Corps de la PR"),
+    repo: str = typer.Option(..., help="Propriétaire/dépôt (ex: owner/repo)"),
+    base: str = typer.Option("main", help="Branche de base (ex: tests)"),
+    head: str = typer.Option(..., help="Branche source (ex: ma-branche)"),
+):
+    """Crée une PR."""
+    args = ["pr", "create", "--title", title, "--body", body, "--fill", "--repo", repo, "--base", base, "--head", head]
+    try:
+        result = gh(*args)
+        typer.echo(f"✅ PR créée : {result}")
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"❌ Erreur : {e.stderr.decode().strip()}", err=True)
+        raise typer.Exit(1)
 @app.command()
 def run_status(
     repo: str = typer.Option("", help="Propriétaire/dépôt (ex: owner/repo)"),
