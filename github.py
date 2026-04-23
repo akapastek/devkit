@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.table import Table
 import typer
 app = typer.Typer()
-
+#i'mworking
 def gh(*args: str) -> str:
     result = subprocess.run(['gh', *args], capture_output=True, text=True, check=True)
     return result.stdout.strip()
