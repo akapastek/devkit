@@ -4,6 +4,7 @@ from typing import Any, List
 from rich.console import Console
 from rich.table import Table
 import typer
+from rich import box
 app = typer.Typer()
 #i'mworking on a new project
 def gh(*args: str) -> str:
