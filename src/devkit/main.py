@@ -6,21 +6,24 @@ from typing import Annotated
 
 from devkit.utils.gh import gh_json, gh
 from devkit.commands.ai import Copilot, Gemini, Mistral
-from devkit.utils.display import rich_print, print_panel, create_progress, display_issues
+from devkit.utils.display import (
+    rich_print, print_panel, create_progress,
+    display_issues, display_pr_summary, display_run_status
+)
 from devkit.utils.validation import confirm
 
 # ----- GLOBAL VARS -----
 
 app = typer.Typer()
 
-# ----- FUNCTIONS -----
+# ----- NON-AI FEATURES -----
 
 @app.command()
 def issues(
-    repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None,
-    limit: Annotated[int, typer.Option(help='Number of issues displayed.')] = 10,
+    limit: Annotated[int, typer.Option(help='Max number of issues displayed.')] = 10,
+    repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None
 ):
-    '''gh issue list as a rich table, colored by state.'''
+    '''List issues as a rich table, colored by state.'''
     # data = gh_json('issue', 'list', '--json', 'title,author,createdAt,state', pretty=True)
     # print(data)
     args = ['issue', 'list', '--json', 'number,title,state,labels', '--limit', str(limit)]
@@ -29,6 +32,65 @@ def issues(
     
     data = gh_json(*args)
     display_issues(data)
+
+@app.command()
+def pr_summary(
+    pr_number: Annotated[int, typer.Argument(..., help='Pull request #.')],
+    repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None
+):
+    """Display title, body and modified files of a PR."""
+    args = ["pr", "view", str(pr_number), "--json", "title,body,files"]
+    if repo is not None:
+        args += ["--repo", repo]
+    
+    data = gh_json(*args)
+    display_pr_summary(data)
+
+@app.command()
+def start_feature(
+    branch_name: Annotated[str, typer.Argument(..., help='New feature\'s branch name.')],
+    repo: Annotated[str, typer.Argument(..., help='Targeted repository.')]
+):
+    """Fork repo and create a branch for the new feature."""
+    gh("repo", "fork", repo, "--clone")
+
+    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+    rich_print(f"✅ Branch '{branch_name}' created and ready for the feature !")
+
+@app.command()
+def open_pr(
+    title: Annotated[str, typer.Argument(..., help="PR title.")],
+    base: Annotated[str, typer.Argument("main", help="Base branch (ex: tests).")],
+    head: Annotated[str, typer.Argument(..., help="Source branch (ex: my-branch).")],
+    body: Annotated[str, typer.Option(help="PR body.")] = "",
+    repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
+):
+    """Creates a PR."""
+    args = ["pr", "create", "--title", title, "--body", body, "--fill", "--base", base, "--head", head]
+    if repo is not None:
+        args += ["--repo", repo]
+    
+    try:
+        result = gh(*args)
+        rich_print(f"✅ PR created : {result}")
+    except subprocess.CalledProcessError as e:
+        rich_print(f"❌ Error : {e.stderr.decode().strip()}", err=True)
+        raise typer.Exit(1)
+
+@app.command()
+def run_status(
+    limit: Annotated[int, typer.Option(help='Max number of issues displayed.')] = 10,
+    repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
+):
+    """Displays statusof last CI runs per branch."""
+    args = ["run", "list", "--limit", str(limit), "--json", "databaseId,headBranch,status,conclusion"]
+    if repo:
+        args += ["--repo", repo]
+    
+    data = gh_json(*args)
+    display_run_status(data)
+
+# ----- AI FEATURES -----
 
 @app.command()
 def explain(command: Annotated[str, typer.Argument(..., help='Shell command to explain')]):

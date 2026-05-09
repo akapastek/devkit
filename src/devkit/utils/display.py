@@ -22,7 +22,40 @@ def display_issues(data: Any):
         labels = ', '.join(l['name'] for l in issue.get('labels', []))
         table.add_row(str(issue['number']), issue['title'], labels or '—')
     
-    console.print(table)
+    rich_print(table)
+
+def display_pr_summary(data: Any):
+    table = Table(title=f"PR Summary", border_style="green")
+    table.add_column("Title", style="cyan", width=50)
+    table.add_column("Files Changed", width=30)
+
+    table.add_row(data["title"], str(len(data["files"])) + " files")
+
+    rich_print(table)
+    rich_print("\n[bold]Body:[/bold]\n" + (data["body"] or "—"))
+
+    if data["files"]:
+        rich_print("\n[bold]Changed Files:[/bold]")
+        for f in data["files"]:
+            rich_print(f"  - {f['path']}")
+
+def display_run_status(data: Any):
+    table = Table(title="CI Run Status", border_style="green")
+    table.add_column("Branch", style="cyan")
+    table.add_column("Status", width=12)
+    table.add_column("Conclusion", width=12)
+
+    for run in data:
+        status = run["status"]
+        conclusion = run["conclusion"]
+        color = "yellow" if status == "queued" else "green" if conclusion == "success" else "red"
+        table.add_row(
+            run["headBranch"],
+            f"[{color}]{status}[/{color}]",
+            f"[{color}]{conclusion or '—'}[/{color}]",
+        )
+
+    rich_print(table)
 
 def create_progress() -> Progress:
     return Progress(
