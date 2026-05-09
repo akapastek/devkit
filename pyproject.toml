@@ -1,0 +1,23 @@
+[build-system]
+requires = ['setuptools>=68']
+build-backend = 'setuptools.build_meta'
+
+[project]
+name = 'devkit'
+version = '0.1.0'
+description = 'Modern CLI with AI-augmented features.'
+requires-python = '>=3.10'
+dependencies = [
+    'typer>=0.9',
+    'rich>=13',
+]
+
+[project.scripts]
+devkit = 'devkit.main:app'
+
+[project.optional-dependencies]
+dev = ['pytest', 'pytest-cov']
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = ["--import-mode=importlib"]
