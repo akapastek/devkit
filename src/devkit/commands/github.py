@@ -6,6 +6,7 @@ from devkit.utils.shell import exec_check, CalledProcessError
 from devkit.utils.display import (
     rich_print, display_issues, display_pr_summary, display_run_status
 )
+from devkit.utils.validation import rich_error
 
 # ----- GLOBAL VARS -----
 
@@ -69,7 +70,7 @@ def open_pr(
         result = gh(*args)
         rich_print(f"✅ PR created : {result}")
     except CalledProcessError as e:
-        rich_print(f"❌ Error : {e.stderr.decode().strip()}", err=True)
+        rich_error(f"❌ Error : {e.stderr.decode().strip()}")
         raise typer.Exit(1)
 
 @app.command()

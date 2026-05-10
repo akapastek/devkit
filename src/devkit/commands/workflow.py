@@ -9,7 +9,7 @@ from devkit.commands.ai import mistral_scaffold
 
 app = typer.Typer()
 
-# ----- COMMANDS
+# ----- COMMANDS -----
 
 @app.command('feature-start')
 def feature_start(
@@ -41,6 +41,6 @@ def feature_start(
         issue_body = gh_json('issue', 'view', str(issue), '--json',
         'title,body')
         plan_stdout = mistral_scaffold(issue_body)
-        print_panel(plan_stdout, title='[cyan]AI Implementation Plan[/cyan]', border_style='cyan')
+        print_panel('[cyan]AI Implementation Plan[/cyan]', plan_stdout)
 
     rich_rule('[green]Ready to code![/green]')
