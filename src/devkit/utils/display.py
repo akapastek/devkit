@@ -2,6 +2,7 @@
 
 from typing import Any
 from rich.console import Console, Group, RenderableType
+from rich.text import TextType
 from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -65,6 +66,9 @@ def create_progress() -> Progress:
 
 def rich_print(text: RenderableType):
     console.print(text)
+
+def rich_rule(title: TextType):
+    console.rule(title)
 
 def print_panel(
     title: str | None = None,
