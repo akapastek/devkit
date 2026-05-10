@@ -4,6 +4,7 @@ from typing import Annotated
 from devkit.config import ConfigTyper
 from devkit.utils.gh import gh_json, gh
 from devkit.utils.shell import exec_check, CalledProcessError
+from devkit.utils.fzf import fzf_select
 from devkit.utils.display import (
     rich_print, display_issues, display_pr_summary, display_run_status
 )
@@ -18,7 +19,8 @@ app = ConfigTyper()
 @app.command()
 def issues(
     limit: Annotated[int, typer.Option(help='Max number of issues displayed.')] = 10,
-    repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None
+    repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None,
+    interactive: Annotated[bool, typer.Option('--interactive', '-i', help='Pipes results through fzf.')] = False
 ):
     '''List issues as a rich table, colored by state.'''
     # data = gh_json('issue', 'list', '--json', 'title,author,createdAt,state', pretty=True)
@@ -29,8 +31,14 @@ def issues(
     if repo is not None:
         args += ['--repo', repo]
     
-    data = gh_json(*args)
-    display_issues(data, app.get_style())
+    if interactive:
+        lines = [f"#{i['number']} {i['title']}" for i in data]
+        selected = fzf_select(lines, prompt='Issue > ')
+        issue_num = selected.split()[0].lstrip('#')
+        gh('issue', 'view', issue_num, '--web') # open in browser
+    else:
+        data = gh_json(*args)
+        display_issues(data, app.get_style())
 
 @app.command()
 def pr_summary(

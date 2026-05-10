@@ -30,6 +30,7 @@ class ConfigTyper(typer.Typer):
         self.progress: Progress | None = None
         if self.cfg.get("show_spinner", default=False):
             self.progress = create_progress()
+            self.progress.start()
         self.progress_task = self.progress.add_task('Thinking...')
         
         # default repo
