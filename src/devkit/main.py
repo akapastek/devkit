@@ -3,19 +3,30 @@
 import typer
 import subprocess
 from typing import Annotated
+from rich.console import Console
 
-from devkit.utils.gh import gh_json, gh
-from devkit.commands.ai import Copilot, Gemini, Mistral
-from devkit.utils.display import (
+# Importation des utilitaires et commandes
+from utils.gh import gh_json, gh
+from commands.ai import Copilot, Gemini, Mistral
+from utils.display import (
     rich_print, print_panel, create_progress,
     display_issues, display_pr_summary, display_run_status
 )
-from devkit.utils.validation import confirm
+from utils.validation import confirm
+from utils.check import check_tools  # Ajouté pour le Step 15
 
 # ----- GLOBAL VARS -----
 
+console = Console()
 app = typer.Typer()
 
+@app.callback(invoke_without_command=True)
+def main(ctx: typer.Context):
+    """AI-powered developer toolkit"""
+    check_tools()  # Vérification de gh, fzf, bat, delta 
+    if ctx.invoked_subcommand is None:
+        from rich.panel import Panel
+        console.print(Panel('Welcome to [bold cyan]devkit[/bold cyan]', border_style='cyan'))
 # ----- NON-AI FEATURES -----
 
 @app.command()
@@ -24,8 +35,6 @@ def issues(
     repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None
 ):
     '''List issues as a rich table, colored by state.'''
-    # data = gh_json('issue', 'list', '--json', 'title,author,createdAt,state', pretty=True)
-    # print(data)
     args = ['issue', 'list', '--json', 'number,title,state,labels', '--limit', str(limit)]
     if repo is not None:
         args += ['--repo', repo]
@@ -35,7 +44,7 @@ def issues(
 
 @app.command()
 def pr_summary(
-    pr_number: Annotated[int, typer.Argument(..., help='Pull request #.')],
+    pr_number: Annotated[int, typer.Argument(help='Pull request #.')] = ...,
     repo: Annotated[str | None, typer.Option(help='Targeted repository.')] = None
 ):
     """Display title, body and modified files of a PR."""
@@ -48,20 +57,26 @@ def pr_summary(
 
 @app.command()
 def start_feature(
-    branch_name: Annotated[str, typer.Argument(..., help='New feature\'s branch name.')],
-    repo: Annotated[str, typer.Argument(..., help='Targeted repository.')]
+    branch_name: Annotated[str, typer.Argument(help="New feature's branch name.")] = ...,
+    repo: Annotated[str, typer.Argument(help="Targeted repository.")] = ...
 ):
     """Fork repo and create a branch for the new feature."""
-    gh("repo", "fork", repo, "--clone")
+    """Fork le repo et crée une branche (Step 12/15)."""
+    try:
+        # On tente le fork et le clone
+        gh("repo", "fork", repo, "--clone")
+    except Exception:
+        # Si ça échoue (ex: dossier déjà présent), on affiche un message simple et on continue
+        rich_print("[yellow]Le dépôt est déjà présent ou le fork existe déjà. Passage à la création de branche...[/yellow]")
 
     subprocess.run(["git", "checkout", "-b", branch_name], check=True)
     rich_print(f"✅ Branch '{branch_name}' created and ready for the feature !")
 
 @app.command()
 def open_pr(
-    title: Annotated[str, typer.Argument(..., help="PR title.")],
-    base: Annotated[str, typer.Argument("main", help="Base branch (ex: tests).")],
-    head: Annotated[str, typer.Argument(..., help="Source branch (ex: my-branch).")],
+    title: Annotated[str, typer.Argument(help="PR title.")] = ...,
+    base: Annotated[str, typer.Argument(help="Base branch (ex: main).")] = "main",
+    head: Annotated[str, typer.Argument(help="Source branch.")] = ...,
     body: Annotated[str, typer.Option(help="PR body.")] = "",
     repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
 ):
@@ -74,15 +89,15 @@ def open_pr(
         result = gh(*args)
         rich_print(f"✅ PR created : {result}")
     except subprocess.CalledProcessError as e:
-        rich_print(f"❌ Error : {e.stderr.decode().strip()}", err=True)
+        rich_print(f"❌ Error : {e.stderr}", err=True)
         raise typer.Exit(1)
 
 @app.command()
 def run_status(
-    limit: Annotated[int, typer.Option(help='Max number of issues displayed.')] = 10,
+    limit: Annotated[int, typer.Option(help='Max number of runs.')] = 10,
     repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
 ):
-    """Displays statusof last CI runs per branch."""
+    """Displays status of last CI runs per branch."""
     args = ["run", "list", "--limit", str(limit), "--json", "databaseId,headBranch,status,conclusion"]
     if repo:
         args += ["--repo", repo]
@@ -93,20 +108,20 @@ def run_status(
 # ----- AI FEATURES -----
 
 @app.command()
-def explain(command: Annotated[str, typer.Argument(..., help='Shell command to explain')]):
+def explain(command: Annotated[str, typer.Argument(help='Shell command to explain')] = ...):
     '''Ask Copilot CLI to explain a shell command.'''
     result_text = Copilot.explain(command)
-    print_panel('[purple]Copilot Explaination[/purple]', result_text)
+    print_panel('[purple]Copilot Explanation[/purple]', result_text)
 
 @app.command()
-def suggest(command: Annotated[str, typer.Argument(..., help='Task to accomplish')]):
+def suggest(command: Annotated[str, typer.Argument(help='Task to accomplish')] = ...):
     '''Ask Copilot CLI to suggest a command.'''
     result_text = Copilot.suggest(command)
     print_panel('[purple]Copilot Suggestion[/purple]', result_text)
 
 @app.command()
 def review(
-    pr_number: Annotated[int, typer.Argument(..., help='PR number to review')],
+    pr_number: Annotated[int, typer.Argument(help='PR number to review')] = ...,
 ):
     '''AI-powered code review of a pull request.'''
     with create_progress() as progress:
@@ -130,12 +145,10 @@ def commit():
     suggested = Mistral.commit(diff)
     print_panel('[green]Suggested Commit Message[/green]', suggested)
 
-    confirm('Use this message?')
-    subprocess.run(['git', 'commit', '-m', suggested])
+    if confirm('Use this message?'):
+        subprocess.run(['git', 'commit', '-m', suggested])
 
 # ----- MAIN -----
 
-# not executed if installed via 'pip install -e .', sinces the latter uses 'app' directly as the entry point
 if __name__ == '__main__':
-    print('inside __main__')
     app()
