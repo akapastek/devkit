@@ -1,8 +1,8 @@
 import typer
-import subprocess
 from typing import Annotated, Any
 
 from devkit.utils.gh import gh_json, gh
+from devkit.utils.shell import exec_capture, exec_check
 from devkit.utils.display import rich_print, print_panel, create_progress
 from devkit.utils.validation import confirm
 
@@ -21,43 +21,30 @@ def copilot_explain(command: str) -> str:
         Pretty print and don't refrain from skipping lines.\
         Here is the text: [{command}]"
     
-    result = subprocess.run(
-        ['gh', 'copilot', '-p', prompt],
-        capture_output=True, text=True
-    )
-    return result.stdout
+    return exec_capture(['gh', 'copilot', '-p', prompt])
 
 def copilot_suggest(task: str) -> str:
     '''Ask Copilot CLI to suggest a command to realize the given task.'''
     prompt = f'Answer in the form of a shell command the realization of the task described by the following user input: [{task}]'
     
-    result = subprocess.run(
-        ['gh', 'copilot', '-p', prompt],
-        capture_output=True, text=True
-    )
-    return result.stdout
+    return exec_capture(['gh', 'copilot', '-p', prompt])
 
 def gemini_review(pr_title: str, diff: str) -> str:
     '''AI-powered code review of a pull request.'''
     prompt = f'Review this PR titled "{pr_title}":\n\n{diff[:4000]}'
 
-    result = subprocess.run(
-        ['gemini', '-p', prompt],
-        capture_output=True, text=True
-    )
-    return result.stdout
+    return exec_capture(['gemini', '-p', prompt])
 
 def mistral_commit(diff: str) -> str:
     '''Generate a commit message from staged changes using AI.'''
     prompt = f'Write a conventional commit message for these staged changes:\n\n{diff[:3000]}'
-    result = subprocess.run(['vibe', '-p', prompt], capture_output=True, text=True)
-    return result.stdout.strip()
+    result = exec_capture(['vibe', '-p', prompt])
+    return result.strip()
 
 def mistral_scaffold(issue_body: Any) -> str:
     '''AI scaffold used in `./workflow.py` .'''
     prompt = f'I\'m starting work on: {issue_body["title"]}\n{issue_body["body"]}\nSuggest a step-by-step implementation plan.'
-    plan = subprocess.run(['vibe', '-p', prompt], capture_output=True, text=True)
-    return plan.stdout
+    return exec_capture(['vibe', '-p', prompt])
 
 # ----- COMMANDS -----
 
@@ -91,7 +78,7 @@ def review(
 @app.command()
 def commit():
     '''Generate a commit message from staged changes using AI.'''
-    diff = subprocess.check_output(['git', 'diff', '--cached'], text=True)
+    diff = exec_capture(['git', 'diff', '--cached'], text=True)
     if not diff.strip():
         rich_print('[yellow]No staged changes.[/yellow]')
         raise typer.Exit()
@@ -100,4 +87,4 @@ def commit():
     print_panel('[green]Suggested Commit Message[/green]', suggested)
 
     confirm('Use this message?')
-    subprocess.run(['git', 'commit', '-m', suggested])
+    exec_check(['git', 'commit', '-m', suggested])

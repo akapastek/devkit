@@ -1,8 +1,8 @@
 import typer
-import subprocess
 from typing import Annotated
 
 from devkit.utils.gh import gh_json, gh
+from devkit.utils.shell import exec_check, CalledProcessError
 from devkit.utils.display import (
     rich_print, display_issues, display_pr_summary, display_run_status
 )
@@ -49,7 +49,7 @@ def start_feature(
     """Fork repo and create a branch for the new feature."""
     gh("repo", "fork", repo, "--clone")
 
-    subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+    exec_check(["git", "checkout", "-b", branch_name])
     rich_print(f"✅ Branch '{branch_name}' created and ready for the feature !")
 
 @app.command()
@@ -68,7 +68,7 @@ def open_pr(
     try:
         result = gh(*args)
         rich_print(f"✅ PR created : {result}")
-    except subprocess.CalledProcessError as e:
+    except CalledProcessError as e:
         rich_print(f"❌ Error : {e.stderr.decode().strip()}", err=True)
         raise typer.Exit(1)
 

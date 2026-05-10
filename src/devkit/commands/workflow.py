@@ -1,7 +1,7 @@
 import typer
-import subprocess
 
 from devkit.utils.gh import gh, gh_json
+from devkit.utils.shell import exec_check
 from devkit.utils.display import rich_print, print_panel, rich_rule
 from devkit.commands.ai import mistral_scaffold
 
@@ -22,11 +22,11 @@ def feature_start(
 
     # 1. Create branch
     branch = f'feature/{name}'
-    subprocess.run(['git', 'checkout', '-b', branch], check=True)
+    exec_check(['git', 'checkout', '-b', branch])
     rich_print(f'[green] [/green] Created branch: {branch}')
 
     # 2. Push branch
-    subprocess.run(['git', 'push', '-u', 'origin', branch], check=True)
+    exec_check(['git', 'push', '-u', 'origin', branch])
 
     # 3. Create draft PR
     pr_title = name.replace('-', ' ').title()
