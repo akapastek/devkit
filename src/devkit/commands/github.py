@@ -1,6 +1,7 @@
 import typer
 from typing import Annotated
 
+from devkit.config import ConfigTyper
 from devkit.utils.gh import gh_json, gh
 from devkit.utils.shell import exec_check, CalledProcessError
 from devkit.utils.display import (
@@ -10,7 +11,7 @@ from devkit.utils.validation import rich_error
 
 # ----- GLOBAL VARS -----
 
-app = typer.Typer()
+app = ConfigTyper()
 
 # ----- COMMANDS -----
 
@@ -23,11 +24,13 @@ def issues(
     # data = gh_json('issue', 'list', '--json', 'title,author,createdAt,state', pretty=True)
     # print(data)
     args = ['issue', 'list', '--json', 'number,title,state,labels', '--limit', str(limit)]
+    if repo is None:
+        repo = app.default_repo
     if repo is not None:
         args += ['--repo', repo]
     
     data = gh_json(*args)
-    display_issues(data)
+    display_issues(data, app.get_style())
 
 @app.command()
 def pr_summary(
@@ -36,11 +39,13 @@ def pr_summary(
 ):
     """Display title, body and modified files of a PR."""
     args = ["pr", "view", str(pr_number), "--json", "title,body,files"]
+    if repo is None:
+        repo = app.default_repo
     if repo is not None:
         args += ["--repo", repo]
     
     data = gh_json(*args)
-    display_pr_summary(data)
+    display_pr_summary(data, app.get_style())
 
 @app.command()
 def start_feature(
@@ -63,6 +68,8 @@ def open_pr(
 ):
     """Creates a PR."""
     args = ["pr", "create", "--title", title, "--body", body, "--fill", "--base", base, "--head", head]
+    if repo is None:
+        repo = app.default_repo
     if repo is not None:
         args += ["--repo", repo]
     
@@ -80,8 +87,10 @@ def run_status(
 ):
     """Displays statusof last CI runs per branch."""
     args = ["run", "list", "--limit", str(limit), "--json", "databaseId,headBranch,status,conclusion"]
+    if repo is None:
+        repo = app.default_repo
     if repo:
         args += ["--repo", repo]
     
     data = gh_json(*args)
-    display_run_status(data)
+    display_run_status(data, app.get_style())

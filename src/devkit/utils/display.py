@@ -13,9 +13,9 @@ console = Console()
 
 # ----- FUNCTIONS -----
 
-def display_issues(data: Any):
-    table = Table(title='Open Issues', border_style='green')
-    table.add_column('#', style='cyan', width=6)
+def display_issues(data: Any, style: str):
+    table = Table(title='Open Issues', border_style=style)
+    table.add_column('#', style=style, width=6)
     table.add_column('Title', min_width=30)
     table.add_column('Labels', width=20)
 
@@ -25,9 +25,9 @@ def display_issues(data: Any):
     
     rich_print(table)
 
-def display_pr_summary(data: Any):
-    table = Table(title=f"PR Summary", border_style="green")
-    table.add_column("Title", style="cyan", width=50)
+def display_pr_summary(data: Any, style: str):
+    table = Table(title=f"PR Summary", border_style=style)
+    table.add_column("Title", style=style, width=50)
     table.add_column("Files Changed", width=30)
 
     table.add_row(data["title"], str(len(data["files"])) + " files")
@@ -40,9 +40,9 @@ def display_pr_summary(data: Any):
         for f in data["files"]:
             rich_print(f"  - {f['path']}")
 
-def display_run_status(data: Any):
-    table = Table(title="CI Run Status", border_style="green")
-    table.add_column("Branch", style="cyan")
+def display_run_status(data: Any, style: str):
+    table = Table(title="CI Run Status", border_style=style)
+    table.add_column("Branch", style=style)
     table.add_column("Status", width=12)
     table.add_column("Conclusion", width=12)
 
