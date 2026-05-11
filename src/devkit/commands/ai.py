@@ -55,7 +55,7 @@ def review(
 @app.command()
 def commit():
     '''Generate a commit message from staged changes using AI.'''
-    diff = exec_capture(['git', 'diff', '--cached'], text=True)
+    diff = exec_capture(['git', 'diff', '--cached'])
     if not diff:
         rich_print('[yellow]No staged changes.[/yellow]')
         raise typer.Exit()
