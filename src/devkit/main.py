@@ -4,6 +4,7 @@ import typer
 
 from devkit.commands import github, ai, workflow
 from devkit.utils.display import rich_print, print_panel
+from devkit.utils.validation import check_tools
 
 # ----- GLOBAL VARS -----
 
@@ -22,6 +23,8 @@ app.add_typer(workflow.app, name='workflow', help='End-to-end dev workflows')
 
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context):
+    '''AI-powered developer toolkit'''
+    check_tools()
     if ctx.invoked_subcommand is None:
         print_panel(None, 'Welcome to [bold cyan]devkit[/bold cyan]')
         rich_print(ctx.get_help())
