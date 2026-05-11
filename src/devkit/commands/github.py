@@ -12,7 +12,7 @@ from devkit.utils.validation import rich_error
 
 # ----- GLOBAL VARS -----
 
-app = ConfigTyper()
+app = ConfigTyper('Executing...')
 
 # ----- COMMANDS -----
 
@@ -31,13 +31,13 @@ def issues(
     if repo is not None:
         args += ['--repo', repo]
     
+    data = gh_json(*args)
     if interactive:
         lines = [f"#{i['number']} {i['title']}" for i in data]
         selected = fzf_select(lines, prompt='Issue > ')
         issue_num = selected.split()[0].lstrip('#')
         gh('issue', 'view', issue_num, '--web') # open in browser
     else:
-        data = gh_json(*args)
         display_issues(data, app.get_style())
 
 @app.command()
@@ -69,8 +69,8 @@ def start_feature(
 @app.command()
 def open_pr(
     title: Annotated[str, typer.Argument(..., help="PR title.")],
-    base: Annotated[str, typer.Argument("main", help="Base branch (ex: tests).")],
     head: Annotated[str, typer.Argument(..., help="Source branch (ex: my-branch).")],
+    base: Annotated[str, typer.Argument(..., help="Base branch (ex: tests).")] = "main",
     body: Annotated[str, typer.Option(help="PR body.")] = "",
     repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
 ):
@@ -93,7 +93,7 @@ def run_status(
     limit: Annotated[int, typer.Option(help='Max number of issues displayed.')] = 10,
     repo: Annotated[str | None, typer.Option(help="Targeted repository.")] = None
 ):
-    """Displays statusof last CI runs per branch."""
+    """Displays status of last CI runs per branch."""
     args = ["run", "list", "--limit", str(limit), "--json", "databaseId,headBranch,status,conclusion"]
     if repo is None:
         repo = app.default_repo

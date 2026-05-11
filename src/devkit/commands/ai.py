@@ -9,7 +9,7 @@ from devkit.utils.validation import confirm
 
 # ----- GLOBAL VARS -----
 
-app = ConfigTyper()
+app = ConfigTyper('Thinking...')
 
 # ----- FUNCTIONS -----
 
@@ -30,14 +30,14 @@ def explain(command: Annotated[str, typer.Argument(..., help='Shell command to e
         Pretty print and don't refrain from skipping lines.\
         Here is the text: [{command}]"
 
-    app.print_ai_output(prompt, 'Copilot Explaination')
+    app.print_ai_output(prompt, 'AI Explaination')
 
 @app.command()
 def suggest(command: Annotated[str, typer.Argument(..., help='Task to accomplish')]):
     '''Ask AI to suggest a command to realize the given task.'''
     prompt = f'Answer in the form of a shell command the realization of the task described by the following user input: [{command}]'
     
-    app.print_ai_output(prompt, 'Copilot Suggestion')
+    app.print_ai_output(prompt, 'AI Suggestion')
 
 @app.command()
 def review(
@@ -50,13 +50,13 @@ def review(
 
     app.update_progress('Running AI review...')
     prompt = f'Review this PR titled "{pr_info["title"]}":\n\n{diff[:4000]}'
-    app.print_ai_output(prompt, 'AI Review — PR #{pr_number}')
+    app.print_ai_output(prompt, f'AI Review — PR #{pr_number}')
 
 @app.command()
 def commit():
     '''Generate a commit message from staged changes using AI.'''
     diff = exec_capture(['git', 'diff', '--cached'], text=True)
-    if not diff.strip():
+    if not diff:
         rich_print('[yellow]No staged changes.[/yellow]')
         raise typer.Exit()
     

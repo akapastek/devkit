@@ -1,14 +1,15 @@
 import typer
+from time import sleep
 
 from devkit.config import ConfigTyper
 from devkit.utils.gh import gh, gh_json
-from devkit.utils.shell import exec_check
-from devkit.utils.display import rich_print, rich_rule
+from devkit.utils.shell import exec_capture
+from devkit.utils.display import rich_rule
 from devkit.commands.ai import scaffold
 
 # ----- GLOBAL VARS -----
 
-app = ConfigTyper()
+app = ConfigTyper('Executing workflow...')
 
 # ----- COMMANDS -----
 
@@ -19,15 +20,13 @@ def feature_start(
 ):
     '''Start a new feature: branch + draft PR + AI scaffold.'''
 
-    rich_rule('Starting Feature')
-
     # 1. Create branch
     branch = f'feature/{name}'
-    exec_check(['git', 'checkout', '-b', branch])
-    rich_print(f'[green]✓[/green] Created branch: {branch}')
+    exec_capture(['git', 'checkout', '-b', branch])
+    app.update_progress(f'[green]✓[/green] Created branch: {branch}')
 
     # 2. Push branch
-    exec_check(['git', 'push', '-u', 'origin', branch])
+    exec_capture(['git', 'push', '-u', 'origin', branch])
 
     # 3. Create draft PR
     pr_title = name.replace('-', ' ').title()
@@ -35,7 +34,7 @@ def feature_start(
     if issue:
         pr_args += ['--body', f'Closes #{issue}']
     pr_url = gh(*pr_args)
-    rich_print(f'[green]✓[/green] Draft PR: {pr_url}')
+    app.update_progress(f'[green]✓[/green] Draft PR: {pr_url}')
 
     # 4. AI scaffold
     if issue:
@@ -44,4 +43,5 @@ def feature_start(
         plan_stdout = scaffold(issue_body)
         app.print_with_theme(plan_stdout, 'AI Implementation Plan')
 
-    rich_rule('[green]Ready to code![/green]')
+    # give time to user to see progress status
+    sleep(3)

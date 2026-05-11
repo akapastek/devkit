@@ -2,11 +2,12 @@
 import json
 import typer
 from pathlib import Path
-from rich.progress import Progress
+from functools import wraps
+from rich.progress import Progress, TaskID
 
 from devkit.utils.shell import exec_capture
 from devkit.utils.display import print_panel, create_progress
-from devkit.config import load_config, save_config
+from devkit.utils.validation import rich_error
 
 # ----- GLOBAL VERS -----
 
@@ -14,38 +15,55 @@ CONFIG_FILE = Path.home() / '.devkit' / 'config.json'
 DEFAULTS = {
     'ai_tool': 'mistral', # or 'gemini' or 'gh copilot'
     'default_repo': '',
-    'theme': 'dark',
+    'theme': 'light',
     'show_spinner': True,
 }
 
 # ----- CLASSES -----
 
 class ConfigTyper(typer.Typer):
-    def __init__(self):
+    cfg: dict | None = None
+
+    def __init__(self, init_progress_message: str = 'Loading...'):
         super().__init__()
 
-        self.cfg = load_config()
+        # load config once
+        if ConfigTyper.cfg is None:
+            ConfigTyper.cfg = load_config()
+            validate_config(ConfigTyper.cfg)
+            parse_config(ConfigTyper.cfg)
+        self.cfg = ConfigTyper.cfg
 
         # show spinner
         self.progress: Progress | None = None
-        if self.cfg.get("show_spinner", default=False):
+        self.progress_task: TaskID | None = None
+        if self.cfg.get('show_spinner'):
             self.progress = create_progress()
-            self.progress.start()
-        self.progress_task = self.progress.add_task('Thinking...')
+            self.progress_task = self.progress.add_task(init_progress_message)
         
-        # default repo
-        self.default_repo: str | None = self.cfg.get("default_repo", default=None)
-        if self.default_repo == '':
-            self.default_repo = None
-        
-        # ai tool
-        ai_tool: str | None = self.cfg.get("ai_tool", default=None)
-        assert ai_tool in ["mistral", "gh copilot", "gemini"]
-        self.ai_tool: str = ai_tool
+        # rest
+        self.default_repo: str | None = self.cfg['default_repo']
+        self.ai_tool: str = self.cfg['ai_tool']
+        self.theme: str = self.cfg['theme']
+    
+    # override
+    def command(self, name: str | None = None):
+        def wrap_command(decorator):
+            '''Handles automatic progress display and saving configuration.'''
+            def new_f(f):
+                @wraps(f)
+                def wrapper(*args, **kwargs):
+                    if self.progress is not None:
+                        self.progress.start()
+                    try:
+                        f(*args, **kwargs)
+                    finally:
+                        self.stop_progress()
+                        save_config(self.cfg)
+                return decorator(wrapper)
+            return new_f
 
-        # theme
-        self.theme = self.cfg.get("theme", default="light")
-        assert self.theme in ["light", "dark"]
+        return wrap_command(super().command(name))
     
     def update_progress(self, description: str):
         if self.progress is None:
@@ -55,6 +73,7 @@ class ConfigTyper(typer.Typer):
     def stop_progress(self):
         if self.progress is None:
             return
+        self.update_progress("Done.")
         self.progress.stop()
         self.progress = None
     
@@ -74,12 +93,6 @@ class ConfigTyper(typer.Typer):
     def print_ai_output(self, prompt: str, panel_title: str):
         out = self.ai_output(prompt)
         self.print_with_theme(out, panel_title)
-    
-    # override
-    def command(self):
-        super().command()
-        self.stop_progress()
-        save_config(self.cfg)
 
 # ----- FUNCTIONS -----
 
@@ -89,5 +102,51 @@ def load_config() -> dict:
     return DEFAULTS
 
 def save_config(cfg: dict):
+    # unparse ai tool
+    ai_tool_convert = {
+        'vibe': 'mistral',
+        'gh copilot': 'copilot',
+        'gemini': 'gemini'
+    }
+    cfg["ai_tool"] = ai_tool_convert[cfg["ai_tool"]]
+
     CONFIG_FILE.parent.mkdir(exist_ok=True)
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
+
+def validate_config(cfg: dict):
+    '''Verifies configuration has correct format and values.'''
+    def aux(key: str, is_in: list[str]):
+        val = str(cfg.get(key, None))
+        if not val in is_in:
+            rich_error(f"[red]Error :[/red] '{val}' is not a valid value for key config '{key}'.\nValid values: {is_in}.")
+            exit(1)
+    
+    to_verify: list[tuple[str, list[str]]] = [
+        ("ai_tool", ["mistral", "copilot", "gemini"]),
+        ("theme", ["light", "dark", "None"]),
+        ("show_spinner", ["False", "True", "None"]),
+    ]
+    for key, is_in in to_verify:
+        aux(key, is_in)
+
+def parse_config(cfg: dict):
+    '''Assumes validate_config(cfg) was called before.'''
+    # ai tool
+    ai_tool_convert = {
+        'mistral': 'vibe',
+        'copilot': 'gh copilot',
+        'gemini': 'gemini'
+    }
+    cfg["ai_tool"] = ai_tool_convert[cfg["ai_tool"]]
+
+    # default repo
+    if cfg.get("default_repo", None) == '':
+        cfg["default_repo"] = None
+
+    # theme
+    if str(cfg["theme"]) == "None":
+        cfg["theme"] = "light"
+
+    # show spinner
+    if str(cfg["show_spinner"]) == "None":
+        cfg["show_spinner"] = False
