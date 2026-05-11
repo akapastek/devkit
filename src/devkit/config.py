@@ -7,7 +7,7 @@ from rich.progress import Progress, TaskID
 
 from devkit.utils.shell import exec_capture
 from devkit.utils.display import print_panel, create_progress
-from devkit.utils.validation import rich_error
+from devkit.utils.validation import validate_config
 
 # ----- GLOBAL VERS -----
 
@@ -112,22 +112,6 @@ def save_config(cfg: dict):
 
     CONFIG_FILE.parent.mkdir(exist_ok=True)
     CONFIG_FILE.write_text(json.dumps(cfg, indent=2))
-
-def validate_config(cfg: dict):
-    '''Verifies configuration has correct format and values.'''
-    def aux(key: str, is_in: list[str]):
-        val = str(cfg.get(key, None))
-        if not val in is_in:
-            rich_error(f"[red]Error :[/red] '{val}' is not a valid value for key config '{key}'.\nValid values: {is_in}.")
-            exit(1)
-    
-    to_verify: list[tuple[str, list[str]]] = [
-        ("ai_tool", ["mistral", "copilot", "gemini"]),
-        ("theme", ["light", "dark", "None"]),
-        ("show_spinner", ["False", "True", "None"]),
-    ]
-    for key, is_in in to_verify:
-        aux(key, is_in)
 
 def parse_config(cfg: dict):
     '''Assumes validate_config(cfg) was called before.'''
