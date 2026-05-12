@@ -5,7 +5,8 @@ import shutil
 from rich.console import Console, RenderableType
 from rich.text import TextType
 from rich.prompt import Confirm
-from datetime import date
+
+from devkit.utils.shell import exec_capture, CalledProcessError
 
 # ----- GLOBAL VARS -----
 
@@ -23,9 +24,9 @@ REQUIRED_TOOLS = {
 def check_tools():
     missing = {t: hint for t, hint in REQUIRED_TOOLS.items() if not shutil.which(t)}
     if missing:
-        err_console.print('[red]Missing required tools:[/red]')
+        rich_error('[red]Missing required tools:[/red]')
         for tool, hint in missing.items():
-            err_console.print(f' [cyan]{tool}[/cyan] — {hint}')
+            rich_error(f' [cyan]{tool}[/cyan] — {hint}')
         raise SystemExit(1)
 
 def validate_config(cfg: dict):
@@ -34,7 +35,7 @@ def validate_config(cfg: dict):
         val = str(cfg.get(key, None))
         if not val in is_in:
             rich_error(f"[red]Error :[/red] '{val}' is not a valid value for key config '{key}'.\nValid values: {is_in}.")
-            exit(1)
+            raise SystemExit(1)
     
     to_verify: list[tuple[str, list[str]]] = [
         ("ai_tool", ["mistral", "copilot", "gemini"]),
@@ -43,6 +44,18 @@ def validate_config(cfg: dict):
     ]
     for key, is_in in to_verify:
         aux(key, is_in)
+
+def check_ai_tool(cfg: dict):
+    '''Checks if the ai tool given by the user is installed.'''
+    tool: str | None = cfg.get("ai_tool")
+    if tool is None: return
+    
+    try:
+        exec_capture(tool.split() + ['--version'])
+    except (CalledProcessError, FileNotFoundError):
+        rich_error('[red]Missing required ai tool:[/red]')
+        rich_error(f' [cyan]{tool}[/cyan]')
+        raise SystemExit(1)
 
 def rich_error(text: RenderableType):
     err_console.print(text)

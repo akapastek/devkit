@@ -7,7 +7,7 @@ from rich.progress import Progress, TaskID
 
 from devkit.utils.shell import exec_capture
 from devkit.utils.display import print_panel, create_progress
-from devkit.utils.validation import validate_config
+from devkit.utils.validation import validate_config, check_ai_tool
 
 # ----- GLOBAL VERS -----
 
@@ -32,6 +32,7 @@ class ConfigTyper(typer.Typer):
             ConfigTyper.cfg = load_config()
             validate_config(ConfigTyper.cfg)
             parse_config(ConfigTyper.cfg)
+            check_ai_tool(ConfigTyper.cfg)
         self.cfg = ConfigTyper.cfg
 
         # show spinner
@@ -78,7 +79,7 @@ class ConfigTyper(typer.Typer):
         self.progress = None
     
     def ai_output(self, prompt: str) -> str:
-        out = exec_capture([self.ai_tool, '-p', prompt])
+        out = exec_capture(self.ai_tool.split() + ['-p', prompt])
         self.stop_progress()
         return out
     
