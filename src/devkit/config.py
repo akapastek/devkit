@@ -22,6 +22,8 @@ DEFAULTS = {
 # ----- CLASSES -----
 
 class ConfigTyper(typer.Typer):
+    '''Child class of `typer.Typer` to manage config loading/saving and associated features
+    (spinner display, calling the right AI tool, displaying with the right theme).'''
     cfg: dict | None = None
 
     def __init__(self, init_progress_message: str = 'Loading...'):
@@ -50,7 +52,7 @@ class ConfigTyper(typer.Typer):
     # override
     def command(self, name: str | None = None):
         def wrap_command(decorator):
-            '''Handles automatic progress display and saving configuration.'''
+            '''Handle automatic progress display and saving configuration.'''
             def new_f(f):
                 @wraps(f)
                 def wrapper(*args, **kwargs):
@@ -67,11 +69,13 @@ class ConfigTyper(typer.Typer):
         return wrap_command(super().command(name))
     
     def update_progress(self, description: str):
+        '''Update spinner text.'''
         if self.progress is None:
             return
         self.progress.update(self.progress_task, description=description)
 
     def stop_progress(self):
+        '''Set spinner as 'Done' for the rest of the code execution.'''
         if self.progress is None:
             return
         self.update_progress("Done.")
@@ -79,30 +83,36 @@ class ConfigTyper(typer.Typer):
         self.progress = None
     
     def ai_output(self, prompt: str) -> str:
+        '''Call the right AI.'''
         out = exec_capture(self.ai_tool.split() + ['-p', prompt])
         self.stop_progress()
         return out
     
     def get_style(self) -> str:
+        '''Get style given by config.'''
         return 'cyan' if self.theme == 'light' else 'purple'
     
     def print_with_theme(self, content: str, panel_title: str):
+        '''Print panel with style given by config.'''
         style = self.get_style()
         panel_title = f'[{style}]{panel_title}[/{style}]'
         print_panel(panel_title, content, border_style=style)
 
     def print_ai_output(self, prompt: str, panel_title: str):
+        '''Call the right AI and print output.'''
         out = self.ai_output(prompt)
         self.print_with_theme(out, panel_title)
 
 # ----- FUNCTIONS -----
 
 def load_config() -> dict:
+    '''Load config.json fromthe disk (if it exists), fill with defaults.'''
     if CONFIG_FILE.exists():
         return {**DEFAULTS, **json.loads(CONFIG_FILE.read_text())}
     return DEFAULTS
 
 def save_config(cfg: dict):
+    '''Save config to disk.'''
     # unparse ai tool
     ai_tool_convert = {
         'vibe': 'mistral',

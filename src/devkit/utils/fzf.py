@@ -1,3 +1,5 @@
+'''fzf util functions.'''
+
 from devkit.utils.shell import exec_capture
 
 def fzf_select(items: list[str], prompt: str = 'Select > ') -> str:
