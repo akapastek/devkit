@@ -1,4 +1,4 @@
-'''Contains all the devkit commands.'''
+'''Main file, regroups the command groups.'''
 
 import typer
 

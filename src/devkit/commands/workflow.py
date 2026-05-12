@@ -1,10 +1,11 @@
+'''Commands integrating git workflows (gh CLI + AI).'''
+
 import typer
 from time import sleep
 
 from devkit.config import ConfigTyper
 from devkit.utils.gh import gh, gh_json
 from devkit.utils.shell import exec_capture
-from devkit.utils.display import rich_rule
 from devkit.commands.ai import scaffold
 
 # ----- GLOBAL VARS -----

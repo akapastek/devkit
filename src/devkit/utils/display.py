@@ -2,7 +2,6 @@
 
 from typing import Any
 from rich.console import Console, Group, RenderableType
-from rich.text import TextType
 from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -11,9 +10,33 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 console = Console()
 
-# ----- FUNCTIONS -----
+# ----- SIMPLE FUNCTIONS -----
+
+def create_progress() -> Progress:
+    '''Create a rich.progress.Progress object used to display spinner during loading sequences.'''
+    return Progress(
+        SpinnerColumn(),
+        TextColumn('[progress.description]{task.description}'),
+    )
+
+def rich_print(text: RenderableType):
+    '''console.print wrap for cleaner code.'''
+    console.print(text)
+
+def print_panel(
+    title: str | None = None,
+    *content: RenderableType,
+    border_style: str = 'cyan'
+):
+    '''Centralized function for printing panels.'''
+    content_group = Group(*content)
+    panel = Panel(content_group, title=title, border_style=border_style)
+    rich_print(panel)
+
+# ----- SPECIFIC DISPLAYS
 
 def display_issues(data: Any, style: str):
+    '''Display the table needed by 'devkit gh issues'. '''
     table = Table(title='Open Issues', border_style=style)
     table.add_column('#', style=style, width=6)
     table.add_column('Title', min_width=30)
@@ -26,6 +49,7 @@ def display_issues(data: Any, style: str):
     rich_print(table)
 
 def display_pr_summary(data: Any, style: str):
+    '''Display the table needed by 'devkit gh pr-summary'. '''
     table = Table(title=f"PR Summary", border_style=style)
     table.add_column("Title", style=style, width=50)
     table.add_column("Files Changed", width=30)
@@ -41,6 +65,7 @@ def display_pr_summary(data: Any, style: str):
             rich_print(f"  - {f['path']}")
 
 def display_run_status(data: Any, style: str):
+    '''Display the table needed by 'devkit gh run-status'. '''
     table = Table(title="CI Run Status", border_style=style)
     table.add_column("Branch", style=style)
     table.add_column("Status", width=12)
@@ -57,24 +82,3 @@ def display_run_status(data: Any, style: str):
         )
 
     rich_print(table)
-
-def create_progress() -> Progress:
-    return Progress(
-        SpinnerColumn(),
-        TextColumn('[progress.description]{task.description}'),
-    )
-
-def rich_print(text: RenderableType):
-    console.print(text)
-
-def rich_rule(title: TextType):
-    console.rule(title)
-
-def print_panel(
-    title: str | None = None,
-    *content: RenderableType,
-    border_style: str = 'cyan'
-):
-    content_group = Group(*content)
-    panel = Panel(content_group, title=title, border_style=border_style)
-    rich_print(panel)

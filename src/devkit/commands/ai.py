@@ -1,3 +1,5 @@
+'''Commands executed using the AI tool given by user config.'''
+
 import typer
 from typing import Annotated, Any
 
